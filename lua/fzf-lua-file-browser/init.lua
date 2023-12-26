@@ -9,9 +9,8 @@ local entry_to_fullpath = utils.entry_to_fullpath
 local function browse(opts)
   opts = opts or {}
 
-  if opts.prompt == nil then
-    opts.prompt = 'Browse❯ '
-  end
+  opts.cwd = opts.cwd or vim.loop.cwd()
+  opts.prompt = opts.prompt or 'Browse❯ '
 
   opts.fn_transform = function(entry)
     local fullpath = entry_to_fullpath(entry, opts)
@@ -35,7 +34,7 @@ local function browse(opts)
     end,
 
     ['ctrl-g'] = function()
-      local fullpath = entry_to_fullpath(opts.cwd or vim.loop.cwd(), opts)
+      local fullpath = entry_to_fullpath(opts.cwd, opts)
       local parent = fzf_lua.path.parent(fullpath)
 
       if vim.fn.isdirectory(parent) > 0 then
@@ -50,6 +49,10 @@ local function browse(opts)
     ['alt-y'] = actions.copy,
     ['alt-m'] = actions.move,
     ['alt-d'] = actions.delete,
+  }
+
+  opts.fzf_opts = {
+    ['--header'] = vim.fn.fnameescape(fzf_lua.path.HOME_to_tilde(opts.cwd)),
   }
 
   return fzf_lua.fzf_exec('ls --classify --group-directories-first', opts)
