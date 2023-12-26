@@ -1,6 +1,5 @@
 -- Imports
 local fzf_lua = require('fzf-lua')
-local path = fzf_lua.path
 local actions = require('fzf-lua-file-browser.actions')
 local utils = require('fzf-lua-file-browser.utils')
 
@@ -37,7 +36,7 @@ local function browse(opts)
 
     ['ctrl-g'] = function()
       local fullpath = entry_to_fullpath(opts.cwd or vim.loop.cwd(), opts)
-      local parent = path.parent(fullpath)
+      local parent = fzf_lua.path.parent(fullpath)
 
       if vim.fn.isdirectory(parent) > 0 then
         browse(vim.tbl_deep_extend('force', opts, { cwd = parent }))
@@ -56,4 +55,4 @@ local function browse(opts)
   return fzf_lua.fzf_exec('ls', opts)
 end
 
-return { browse_files = browse, actions = actions }
+return { browse = browse, actions = actions }
