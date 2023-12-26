@@ -17,7 +17,7 @@ local function browse(opts)
     local fullpath = entry_to_fullpath(entry, opts)
 
     if vim.fn.isdirectory(fullpath) > 0 then
-      entry = fzf_lua.utils.ansi_codes.magenta(entry) .. '/'
+      entry = fzf_lua.utils.ansi_codes[opts.dir_color or 'blue'](entry) .. '/'
     end
 
     return fzf_lua.make_entry.file(entry, { file_icons = true, color_icons = true })
