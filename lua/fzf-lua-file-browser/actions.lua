@@ -14,7 +14,7 @@ local create = {
     local relpath = path.HOME_to_tilde(fullpath)
 
     local target_file =
-      input('Create: ' .. relpath .. (path.ends_with_separator(relpath) and '' or path.separator()), nil, 'file')
+      input('Create ' .. relpath .. (path.ends_with_separator(relpath) and '' or path.separator()), nil, 'file')
     if not target_file or #target_file == 0 then
       return false
     end
@@ -48,13 +48,13 @@ local rename = {
     local fullpath_to_file = entry_to_fullpath(selected[1], opts)
     local relpath_to_file = path.HOME_to_tilde(fullpath_to_file)
 
-    local target_file = input('Rename to: ', path.basename(relpath_to_file), 'file')
+    local target_file = input('Rename to ' .. path.parent(relpath_to_file), path.basename(relpath_to_file), 'file')
     if not target_file or #target_file == 0 then
       return false
     end
 
     local fullpath_to_target_file = entry_to_fullpath(target_file, opts)
-    if vim.fn.filereadable(fullpath_to_target_file) == 0 or (input('Overwrite?' .. ' [y/n] ') == 'y') then
+    if vim.fn.filereadable(fullpath_to_target_file) == 0 or (input('Overwrite? [y/n] ') == 'y') then
       vim.loop.fs_rename(fullpath_to_file, fullpath_to_target_file)
     end
 
@@ -72,13 +72,13 @@ local copy = {
     local fullpath_to_file = entry_to_fullpath(selected[1], opts)
     local relpath_to_file = path.HOME_to_tilde(fullpath_to_file)
 
-    local target_file = input('Copy to: ', relpath_to_file, 'file')
+    local target_file = input('Copy to ', relpath_to_file, 'file')
     if not target_file or #target_file == 0 then
       return false
     end
 
     local fullpath_to_target_file = entry_to_fullpath(target_file, opts)
-    if vim.fn.filereadable(fullpath_to_target_file) == 0 or (input('Overwrite?' .. ' [y/n] ') == 'y') then
+    if vim.fn.filereadable(fullpath_to_target_file) == 0 or (input('Overwrite? [y/n] ') == 'y') then
       vim.loop.fs_copyfile(fullpath_to_file, fullpath_to_target_file)
     end
 
@@ -96,13 +96,13 @@ local move = {
     local fullpath_to_file = entry_to_fullpath(selected[1], opts)
     local relpath_to_file = path.HOME_to_tilde(fullpath_to_file)
 
-    local target_file = input('Move to: ', relpath_to_file, 'file')
+    local target_file = input('Move to ', relpath_to_file, 'file')
     if not target_file or #target_file == 0 then
       return false
     end
 
     local fullpath_to_target_file = entry_to_fullpath(target_file, opts)
-    if vim.fn.filereadable(fullpath_to_target_file) == 0 or (input('Overwrite?' .. ' [y/n] ') == 'y') then
+    if vim.fn.filereadable(fullpath_to_target_file) == 0 or (input('Overwrite? [y/n] ') == 'y') then
       if vim.loop.fs_copyfile(fullpath_to_file, fullpath_to_target_file) then
         vim.loop.fs_unlink(fullpath_to_file)
       end
