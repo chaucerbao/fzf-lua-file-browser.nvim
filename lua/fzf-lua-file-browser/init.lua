@@ -1,5 +1,6 @@
 -- Imports
 local fzf_lua = require('fzf-lua')
+local path = fzf_lua.path
 local actions = require('fzf-lua-file-browser.actions')
 local utils = require('fzf-lua-file-browser.utils')
 
@@ -12,16 +13,10 @@ local function browse(opts)
   opts.cwd = opts.cwd or vim.loop.cwd()
   opts.prompt = opts.prompt or 'Browse❯ '
   opts.fzf_opts = {
-    ['--header'] = vim.fn.fnameescape(fzf_lua.path.HOME_to_tilde(opts.cwd)),
+    ['--header'] = vim.fn.fnameescape(path.HOME_to_tilde(opts.cwd)),
   }
 
   opts.fn_transform = function(entry)
-    local fullpath = entry_to_fullpath(entry, opts)
-
-    if vim.fn.isdirectory(fullpath) > 0 then
-      entry = fzf_lua.utils.ansi_codes[opts.dir_color or 'blue'](entry)
-    end
-
     return fzf_lua.make_entry.file(entry, { file_icons = true, color_icons = true })
   end
 
@@ -43,7 +38,7 @@ local function browse(opts)
 
     ['ctrl-g'] = function()
       local fullpath = entry_to_fullpath(opts.cwd, opts)
-      local parent = fzf_lua.path.parent(fullpath)
+      local parent = path.parent(fullpath)
 
       if vim.fn.isdirectory(parent) > 0 then
         browse(vim.tbl_deep_extend('force', opts, { cwd = parent }))
@@ -59,7 +54,7 @@ local function browse(opts)
     ['alt-d'] = actions.delete,
   }
 
-  return fzf_lua.fzf_exec('ls --classify --group-directories-first --literal', opts)
+  return fzf_lua.fzf_exec('ls --color=always --classify --group-directories-first --literal', opts)
 end
 
 return { browse = browse, actions = actions }
