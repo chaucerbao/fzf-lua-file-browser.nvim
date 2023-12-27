@@ -11,6 +11,9 @@ local function browse(opts)
 
   opts.cwd = opts.cwd or vim.loop.cwd()
   opts.prompt = opts.prompt or 'Browse❯ '
+  opts.fzf_opts = {
+    ['--header'] = vim.fn.fnameescape(fzf_lua.path.HOME_to_tilde(opts.cwd)),
+  }
 
   opts.fn_transform = function(entry)
     local fullpath = entry_to_fullpath(entry, opts)
@@ -24,6 +27,11 @@ local function browse(opts)
 
   opts.actions = {
     ['default'] = function(selected)
+      if #selected == 0 then
+        fzf_lua.actions.resume()
+        return false
+      end
+
       local fullpath = entry_to_fullpath(selected[1], opts)
 
       if vim.fn.isdirectory(fullpath) > 0 then
@@ -51,11 +59,7 @@ local function browse(opts)
     ['alt-d'] = actions.delete,
   }
 
-  opts.fzf_opts = {
-    ['--header'] = vim.fn.fnameescape(fzf_lua.path.HOME_to_tilde(opts.cwd)),
-  }
-
-  return fzf_lua.fzf_exec('ls --classify --group-directories-first', opts)
+  return fzf_lua.fzf_exec('ls --classify --group-directories-first --literal', opts)
 end
 
 return { browse = browse, actions = actions }
