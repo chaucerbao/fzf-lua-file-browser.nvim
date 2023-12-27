@@ -3,6 +3,7 @@ local fzf_lua = require('fzf-lua')
 local path = fzf_lua.path
 local actions = require('fzf-lua-file-browser.actions')
 local utils = require('fzf-lua-file-browser.utils')
+local previewer = require('fzf-lua-file-browser.previewer')
 
 -- Helpers
 local entry_to_fullpath = utils.entry_to_fullpath
@@ -12,6 +13,7 @@ local function browse(opts)
 
   opts.cwd = opts.cwd or vim.loop.cwd()
   opts.prompt = opts.prompt or 'Browse❯ '
+  opts.previewer = previewer
   opts.fzf_opts = {
     ['--header'] = vim.fn.fnameescape(path.HOME_to_tilde(opts.cwd)),
   }
