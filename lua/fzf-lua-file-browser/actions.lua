@@ -1,37 +1,142 @@
 -- Imports
 local actions = require('fzf-lua.actions')
 local path = require('fzf-lua.path')
-local utils = require('fzf-lua-file-browser.utils')
+local utils = require('fzf-lua.utils')
+local fb_utils = require('fzf-lua-file-browser.utils')
 
 -- Helpers
-local entry_to_fullpath = utils.entry_to_fullpath
-local input = utils.input
+local entry_to_fullpath = fb_utils.entry_to_fullpath
+local input = fb_utils.input
+
+local function filter_valid_sources(selected, opts)
+  local sources = {}
+
+  for _, entry in ipairs(selected) do
+    local fullpath_to_source = entry_to_fullpath(entry, opts)
+
+    if vim.fn.isdirectory(fullpath_to_source) > 0 or vim.fn.filereadable(fullpath_to_source) > 0 then
+      table.insert(sources, fullpath_to_source)
+    end
+  end
+
+  return sources
+end
+
+local fs = {}
+
+fs.exists = function(target)
+  return vim.fn.isdirectory(target) > 0 or vim.fn.filereadable(target) > 0
+end
+
+fs.create_directory = function(directory)
+  if fs.exists(directory) then
+    return
+  end
+
+  if vim.fn.executable('mkdir') then
+    vim.fn.system(vim.list_extend({ 'mkdir', '-p', '--' }, { directory }))
+  else
+    -- TODO: Handle recursive creation with `vim.loop`
+    vim.loop.fs_mkdir(directory, 493) -- 0x755
+  end
+end
+
+fs.create_file = function(file)
+  if fs.exists(file) then
+    return
+  end
+
+  if vim.fn.executable('touch') then
+    vim.fn.system(vim.list_extend({ 'touch', '--' }, { file }))
+  else
+    local file_handler = vim.loop.fs_open(file, 'w', 420) -- 0x644
+    if file_handler then
+      vim.loop.fs_close(file_handler)
+    end
+  end
+end
+
+fs.copy = function(sources, destination)
+  if vim.fn.executable('cp') then
+    vim.fn.system(vim.list_extend(vim.list_extend({ 'cp', '-r', '--' }, sources), { destination }))
+  else
+    for _, source in ipairs(sources) do
+      if vim.fn.isdirectory(source) > 0 then
+      -- TODO: Handle recursive copy with `vim.loop`
+      else
+        vim.loop.fs_copyfile(
+          source,
+          vim.fn.isdirectory(destination) > 0 and path.join({ destination, path.basename(source) }) or destination
+        )
+      end
+    end
+  end
+end
+
+fs.move = function(sources, destination)
+  if vim.fn.executable('mv') then
+    vim.fn.system(vim.list_extend(vim.list_extend({ 'mv', '--' }, sources), { destination }))
+  else
+    for _, source in ipairs(sources) do
+      if vim.fn.isdirectory(source) > 0 then
+      -- TODO: Handle recursive move with `vim.loop`
+      else
+        if
+          vim.loop.fs_copyfile(
+            source,
+            vim.fn.isdirectory(destination) > 0 and path.join({ destination, path.basename(source) }) or destination
+          )
+        then
+          vim.loop.fs_unlink(source)
+        end
+      end
+    end
+  end
+end
+
+fs.delete = function(sources)
+  if vim.fn.executable('rm') then
+    vim.fn.system(vim.list_extend({ 'rm', '-rf', '--' }, sources))
+  else
+    for _, source in ipairs(sources) do
+      if vim.fn.isdirectory(source) > 0 then
+      -- TODO: Handle recursive delete with `vim.loop`
+      else
+        for _, source in ipairs(sources) do
+          if vim.fn.isdirectory(source) > 0 then
+            vim.loop.fs_rmdir(source)
+          elseif vim.fn.filereadable(source) > 0 then
+            vim.loop.fs_unlink(source)
+          end
+        end
+      end
+    end
+  end
+end
 
 -- Actions
-local create = {
+local M = {}
+
+M.create = {
   function(selected, opts)
-    local fullpath = entry_to_fullpath(opts.cwd or vim.loop.cwd(), opts)
-    local relpath = path.HOME_to_tilde(fullpath)
-
-    local target_file =
-      input('Create ' .. relpath .. (path.ends_with_separator(relpath) and '' or path.separator()), nil, 'file')
-    if not target_file or #target_file == 0 then
+    local destination = input('Create ' .. path.add_trailing(path.HOME_to_tilde(opts.cwd)), nil, 'file')
+    if not destination or #destination == 0 then
       return false
     end
 
-    local fullpath_to_target_file = entry_to_fullpath(target_file, opts)
-    if vim.fn.filereadable(fullpath_to_target_file) > 0 then
-      require('fzf_lua.utils').err('Already exists!')
+    local fullpath_to_destination = entry_to_fullpath(destination, opts)
+    if fs.exists(path.remove_trailing(fullpath_to_destination)) then
+      utils.err('Already exists')
       return false
     end
 
-    if path.ends_with_separator(fullpath_to_target_file) then
-      vim.loop.fs_mkdir(fullpath_to_target_file, 493) -- 0x755
+    if path.ends_with_separator(fullpath_to_destination) then
+      -- Directory
+      fs.create_directory(fullpath_to_destination)
     else
-      local file_handler = vim.loop.fs_open(fullpath_to_target_file, 'w', 420) -- 0x644
-      if file_handler then
-        vim.loop.fs_close(file_handler)
-      end
+      -- File
+      fs.create_directory(path.parent(fullpath_to_destination))
+      fs.create_file(fullpath_to_destination)
     end
 
     return true
@@ -39,7 +144,7 @@ local create = {
   actions.resume,
 }
 
-local rename = {
+M.rename = {
   function(selected, opts)
     if #selected == 0 then
       return false
@@ -63,96 +168,104 @@ local rename = {
   actions.resume,
 }
 
-local copy = {
+M.copy = {
   function(selected, opts)
-    if #selected == 0 then
+    local sources = filter_valid_sources(selected, opts)
+    if #sources == 0 then
       return false
     end
 
-    local fullpath_to_file = entry_to_fullpath(selected[1], opts)
-    local relpath_to_file = path.HOME_to_tilde(fullpath_to_file)
-
-    local target_file = input('Copy to ', relpath_to_file, 'file')
-    if not target_file or #target_file == 0 then
+    local destination = input(
+      'Copy to ',
+      path.join({ path.HOME_to_tilde(opts.cwd), #sources == 1 and path.basename(sources[1]) or '' }),
+      'file'
+    )
+    if not destination or #destination == 0 then
       return false
     end
 
-    local fullpath_to_target_file = entry_to_fullpath(target_file, opts)
-    if vim.fn.filereadable(fullpath_to_target_file) == 0 or (input('Overwrite? [y/n] ') == 'y') then
-      vim.loop.fs_copyfile(fullpath_to_file, fullpath_to_target_file)
-    end
-
-    return true
-  end,
-  actions.resume,
-}
-
-local move = {
-  function(selected, opts)
-    if #selected == 0 then
-      return false
-    end
-
-    local fullpath_to_file = entry_to_fullpath(selected[1], opts)
-    local relpath_to_file = path.HOME_to_tilde(fullpath_to_file)
-
-    local target_file = input('Move to ', relpath_to_file, 'file')
-    if not target_file or #target_file == 0 then
-      return false
-    end
-
-    local fullpath_to_target_file = entry_to_fullpath(target_file, opts)
-    if vim.fn.filereadable(fullpath_to_target_file) == 0 or (input('Overwrite? [y/n] ') == 'y') then
-      if vim.loop.fs_copyfile(fullpath_to_file, fullpath_to_target_file) then
-        vim.loop.fs_unlink(fullpath_to_file)
+    local fullpath_to_destination = entry_to_fullpath(destination, opts)
+    local fullpath_to_destination_parent = path.parent(fullpath_to_destination)
+    if #sources == 1 and vim.fn.isdirectory(fullpath_to_destination_parent) == 0 then
+      fs.create_directory(fullpath_to_destination_parent)
+    elseif (#sources > 1 or vim.fn.isdirectory(sources[1])) and vim.fn.isdirectory(fullpath_to_destination) == 0 then
+      if vim.fn.filereadable(fullpath_to_destination) == 0 then
+        fs.create_directory(fullpath_to_destination)
+      else
+        utils.err('Destination must be a directory')
       end
     end
 
+    fs.copy(sources, fullpath_to_destination)
+
     return true
   end,
   actions.resume,
 }
 
-local delete = {
+M.move = {
   function(selected, opts)
-    if #selected == 0 then
+    local sources = filter_valid_sources(selected, opts)
+    if #sources == 0 then
+      return false
+    end
+
+    local destination = input(
+      'Move to ',
+      path.join({ path.HOME_to_tilde(opts.cwd), #sources == 1 and path.basename(sources[1]) or '' }),
+      'file'
+    )
+    if not destination or #destination == 0 then
+      return false
+    end
+
+    local fullpath_to_destination = entry_to_fullpath(destination, opts)
+    local fullpath_to_destination_parent = path.parent(fullpath_to_destination)
+    if #sources == 1 and vim.fn.isdirectory(fullpath_to_destination_parent) == 0 then
+      fs.create_directory(fullpath_to_destination_parent)
+    elseif (#sources > 1 or vim.fn.isdirectory(sources[1])) and vim.fn.isdirectory(fullpath_to_destination) == 0 then
+      if vim.fn.filereadable(fullpath_to_destination) == 0 then
+        fs.create_directory(fullpath_to_destination)
+      else
+        utils.err('Destination must be a directory')
+      end
+    end
+
+    fs.move(sources, fullpath_to_destination)
+
+    return true
+  end,
+  actions.resume,
+}
+
+M.delete = {
+  function(selected, opts)
+    local sources = filter_valid_sources(selected, opts)
+    if #sources == 0 then
       return false
     end
 
     local msg
-    if #selected > 1 then
-      msg = 'Delete ' .. #selected .. ' entries?'
+    if #sources > 1 then
+      msg = 'Delete ' .. #sources .. ' entries?'
     else
-      local fullpath_to_file = entry_to_fullpath(selected[1], opts)
-      msg = 'Delete "'
-        .. path.basename(fullpath_to_file)
-        .. (path.ends_with_separator(fullpath_to_file) and path.separator() or '')
-        .. '"?'
+      local source = sources[1]
+      if vim.fn.isdirectory(source) > 1 then
+        source = path.add_trailing(source)
+      end
+
+      msg = 'Delete "' .. path.HOME_to_tilde(source) .. '"?'
     end
 
     if input(msg .. ' [y/n] ') ~= 'y' then
       return false
     end
 
-    for _, entry in ipairs(selected) do
-      local fullpath_to_file = entry_to_fullpath(entry, opts)
-
-      if vim.fn.isdirectory(fullpath_to_file) > 0 then
-        vim.loop.fs_rmdir(fullpath_to_file)
-      elseif vim.fn.filereadable(fullpath_to_file) > 0 then
-        vim.loop.fs_unlink(fullpath_to_file)
-      end
-    end
+    fs.delete(sources)
 
     return true
   end,
   actions.resume,
 }
 
-return {
-  create = create,
-  rename = rename,
-  copy = copy,
-  move = move,
-  delete = delete,
-}
+return M

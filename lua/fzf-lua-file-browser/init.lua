@@ -49,9 +49,8 @@ local function browse(opts)
       end
     end,
 
-    ['alt-c'] = actions.create,
-    ['alt-r'] = actions.rename,
-    ['alt-y'] = actions.copy,
+    ['alt-n'] = actions.create,
+    ['alt-c'] = actions.copy,
     ['alt-m'] = actions.move,
     ['alt-d'] = actions.delete,
   }
