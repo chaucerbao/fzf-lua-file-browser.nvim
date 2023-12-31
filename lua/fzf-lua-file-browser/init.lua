@@ -55,7 +55,7 @@ local function browse(opts)
     ['alt-d'] = actions.delete,
   }
 
-  return fzf_lua.fzf_exec('ls --color=always --classify --group-directories-first --literal', opts)
+  return fzf_lua.fzf_exec('ls --color=always --almost-all --classify --group-directories-first --literal -1', opts)
 end
 
 return { browse = browse, actions = actions }

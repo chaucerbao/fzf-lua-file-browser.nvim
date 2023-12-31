@@ -32,7 +32,7 @@ function FileBrowserPreviewer:populate_preview_buf(entry_str)
 
     self:populate_terminal_cmd(
       tmpbuf,
-      { 'ls', '--color=always', '--classify', '--group-directories-first', '--literal', '-1' },
+      { 'ls', '--color=always', '--almost-all', '--classify', '--group-directories-first', '--literal', '-1' },
       entry
     )
   else
