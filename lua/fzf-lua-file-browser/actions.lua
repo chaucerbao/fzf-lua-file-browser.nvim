@@ -188,7 +188,9 @@ M.copy = {
     local fullpath_to_destination_parent = path.parent(fullpath_to_destination)
     if #sources == 1 and vim.fn.isdirectory(fullpath_to_destination_parent) == 0 then
       fs.create_directory(fullpath_to_destination_parent)
-    elseif (#sources > 1 or vim.fn.isdirectory(sources[1])) and vim.fn.isdirectory(fullpath_to_destination) == 0 then
+    elseif
+      (#sources > 1 or vim.fn.isdirectory(sources[1]) > 0) and vim.fn.isdirectory(fullpath_to_destination) == 0
+    then
       if vim.fn.filereadable(fullpath_to_destination) == 0 then
         fs.create_directory(fullpath_to_destination)
       else
@@ -223,7 +225,9 @@ M.move = {
     local fullpath_to_destination_parent = path.parent(fullpath_to_destination)
     if #sources == 1 and vim.fn.isdirectory(fullpath_to_destination_parent) == 0 then
       fs.create_directory(fullpath_to_destination_parent)
-    elseif (#sources > 1 or vim.fn.isdirectory(sources[1])) and vim.fn.isdirectory(fullpath_to_destination) == 0 then
+    elseif
+      (#sources > 1 or vim.fn.isdirectory(sources[1]) > 0) and vim.fn.isdirectory(fullpath_to_destination) == 0
+    then
       if vim.fn.filereadable(fullpath_to_destination) == 0 then
         fs.create_directory(fullpath_to_destination)
       else
