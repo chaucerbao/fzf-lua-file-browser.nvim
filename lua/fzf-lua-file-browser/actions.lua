@@ -114,6 +114,25 @@ fs.delete = function(sources)
   end
 end
 
+fs.ensure_parent_directory_exists = function(sources, destination)
+  local destination_parent = path.parent(destination)
+
+  if (#sources > 1 or vim.fn.isdirectory(sources[1]) > 0) and vim.fn.filereadable(destination) > 0 then
+    utils.err('Destination must be a directory')
+    return false
+  end
+
+  if #sources == 1 and vim.fn.isdirectory(destination_parent) == 0 then
+    fs.create_directory(destination_parent)
+  end
+
+  if #sources > 1 and vim.fn.isdirectory(destination) == 0 then
+    fs.create_directory(destination)
+  end
+
+  return true
+end
+
 -- Actions
 local M = {}
 
@@ -185,20 +204,10 @@ M.copy = {
     end
 
     local fullpath_to_destination = entry_to_fullpath(destination, opts)
-    local fullpath_to_destination_parent = path.parent(fullpath_to_destination)
-    if #sources == 1 and vim.fn.isdirectory(fullpath_to_destination_parent) == 0 then
-      fs.create_directory(fullpath_to_destination_parent)
-    elseif
-      (#sources > 1 or vim.fn.isdirectory(sources[1]) > 0) and vim.fn.isdirectory(fullpath_to_destination) == 0
-    then
-      if vim.fn.filereadable(fullpath_to_destination) == 0 then
-        fs.create_directory(fullpath_to_destination)
-      else
-        utils.err('Destination must be a directory')
-      end
-    end
 
-    fs.copy(sources, fullpath_to_destination)
+    if fs.ensure_parent_directory_exists(sources, fullpath_to_destination) then
+      fs.copy(sources, fullpath_to_destination)
+    end
 
     return true
   end,
@@ -222,20 +231,10 @@ M.move = {
     end
 
     local fullpath_to_destination = entry_to_fullpath(destination, opts)
-    local fullpath_to_destination_parent = path.parent(fullpath_to_destination)
-    if #sources == 1 and vim.fn.isdirectory(fullpath_to_destination_parent) == 0 then
-      fs.create_directory(fullpath_to_destination_parent)
-    elseif
-      (#sources > 1 or vim.fn.isdirectory(sources[1]) > 0) and vim.fn.isdirectory(fullpath_to_destination) == 0
-    then
-      if vim.fn.filereadable(fullpath_to_destination) == 0 then
-        fs.create_directory(fullpath_to_destination)
-      else
-        utils.err('Destination must be a directory')
-      end
-    end
 
-    fs.move(sources, fullpath_to_destination)
+    if fs.ensure_parent_directory_exists(sources, fullpath_to_destination) then
+      fs.move(sources, fullpath_to_destination)
+    end
 
     return true
   end,
