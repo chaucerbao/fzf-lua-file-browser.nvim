@@ -124,9 +124,7 @@ fs.ensure_parent_directory_exists = function(sources, destination)
 
   if #sources == 1 and vim.fn.isdirectory(destination_parent) == 0 then
     fs.create_directory(destination_parent)
-  end
-
-  if #sources > 1 and vim.fn.isdirectory(destination) == 0 then
+  elseif #sources > 1 and vim.fn.isdirectory(destination) == 0 then
     fs.create_directory(destination)
   end
 
