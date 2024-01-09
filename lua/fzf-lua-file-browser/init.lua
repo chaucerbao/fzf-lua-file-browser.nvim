@@ -19,7 +19,7 @@ local function browse(opts)
   }
 
   opts.fn_transform = function(entry)
-    return fzf_lua.make_entry.file(entry, { file_icons = true, color_icons = true })
+    return fzf_lua.make_entry.file(entry, { file_icons = true, color_icons = true }):gsub('[*=>@|]$', '')
   end
 
   opts.actions = {
