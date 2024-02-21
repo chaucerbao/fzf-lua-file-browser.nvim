@@ -5,7 +5,7 @@ local path = require('fzf-lua.path')
 local function entry_to_fullpath(entry, opts)
   local file = path.entry_to_file(entry)
   local fullpath = file.path
-  if not path.starts_with_separator(fullpath) then
+  if not path.is_absolute(fullpath) then
     fullpath = path.join({ opts.cwd or vim.loop.cwd(), fullpath })
   end
 
