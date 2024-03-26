@@ -42,7 +42,7 @@ end
 
 function FileBrowserPreviewer:update_border(entry)
   if vim.fn.isdirectory(entry.path) > 0 then
-    self.win:update_title(' ' .. path.basename(entry.path) .. path.separator() .. ' ')
+    self.win:update_title(' ' .. path.basename(entry.path) .. ' ')
     self.win:update_scrollbar(entry.no_scrollbar)
   else
     self.super.update_border(self, entry)
